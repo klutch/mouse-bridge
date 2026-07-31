@@ -16,16 +16,6 @@ internal struct POINT
     {
         return new Point(X, Y);
     }
-
-    public static POINT operator +(POINT a, POINT b)
-    {
-        return new POINT(a.X + b.X, a.Y + b.Y);
-    }
-
-    public static POINT operator -(POINT a, POINT b)
-    {
-        return new POINT(a.X - b.X, a.Y - b.Y);
-    }
 }
 
 [StructLayout(LayoutKind.Sequential)]

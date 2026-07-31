@@ -80,8 +80,8 @@ internal sealed class Bridge : IDisposable
         }
         else
         {
-            Cursor.Position = new Point(100,100);
-            Console.WriteLine("Whaaa");
+            Cursor.Position = _topology.Clamp(data.pt).ToPoint();
+            return 1;
         }
 
         _log.Trace(data.pt, current, _topology);
