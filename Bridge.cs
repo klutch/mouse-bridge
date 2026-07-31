@@ -98,16 +98,9 @@ internal sealed class Bridge : IDisposable
     {
         if (topology.Contains(reported))
         {
-            VirtualCursor = reported;
+            VirtualCursor += reported - actual;
             return;
         }
-
-        // Held at an edge: add the step this move wanted to take. The gap
-        // between two reported positions would not do, because at an edge each
-        // one is measured from the pinned cursor and so stops growing.
-        VirtualCursor = new POINT(
-            VirtualCursor.X + (reported.X - actual.X),
-            VirtualCursor.Y + (reported.Y - actual.Y));
     }
 
     public void Dispose()
