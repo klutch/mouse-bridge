@@ -9,3 +9,6 @@ Never use tabs. Always use four spaces. Replace any tabs found with spaces.
 Never commit changes to git.
 
 Try to avoid per-frame allocations when possible.
+
+Do not write tests.
+
