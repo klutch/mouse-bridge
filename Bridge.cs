@@ -15,10 +15,19 @@ internal sealed class Bridge : IDisposable
 
     private IntPtr _hook;
     private Topology _topology;
+    private POINT _lastReported;
+    private bool _tracking;
 
     public bool Enabled { get; set; } = true;
 
     public long JumpCount { get; private set; }
+
+    /// <summary>
+    /// A second cursor that only ever moves by the amount the mouse moved. It
+    /// starts on the real cursor and is not stopped by the edge of the desktop,
+    /// so at an edge it shows where the mouse is really trying to go.
+    /// </summary>
+    public POINT VirtualCursor { get; private set; }
 
     public Bridge(Logger log)
     {
@@ -42,6 +51,10 @@ internal sealed class Bridge : IDisposable
             throw new InvalidOperationException(
                 $"SetWindowsHookEx failed (error {Marshal.GetLastWin32Error()}).");
 
+        // So the virtual cursor has somewhere sensible to sit before the mouse
+        // has moved even once.
+        if (Native.GetCursorPos(out var start)) VirtualCursor = start;
+
         _log.Write("hook installed");
         _log.Write("monitors:" + Environment.NewLine + _topology.Describe());
     }
@@ -55,7 +68,7 @@ internal sealed class Bridge : IDisposable
 
     private IntPtr OnMouseEvent(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode != Native.HC_ACTION || (int)wParam != Native.WM_MOUSEMOVE || !Enabled)
+        if (nCode != Native.HC_ACTION || (int)wParam != Native.WM_MOUSEMOVE)
             return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
 
         var data = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
@@ -66,6 +79,13 @@ internal sealed class Bridge : IDisposable
             return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
 
         if (!Native.GetCursorPos(out var current))
+            return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
+
+        TrackVirtualCursor(data.pt, current);
+
+        // Tracking carries on while paused, so the virtual cursor is still in
+        // the right place when the bridge is switched back on.
+        if (!Enabled)
             return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
 
         var topology = _topology;
@@ -83,6 +103,30 @@ internal sealed class Bridge : IDisposable
         }
 
         return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
+    }
+
+    /// <summary>
+    /// Moves the virtual cursor by the step the mouse just took. The hook hands
+    /// out whole positions rather than steps, so the step is the difference
+    /// between this position and the one before it.
+    /// </summary>
+    /// <remarks>Internal rather than private so it can be exercised without a real mouse.</remarks>
+    internal void TrackVirtualCursor(POINT reported, POINT actual)
+    {
+        if (!_tracking)
+        {
+            // First move seen: start the two off together.
+            VirtualCursor = actual;
+            _lastReported = reported;
+            _tracking = true;
+            return;
+        }
+
+        VirtualCursor = new POINT(
+            VirtualCursor.X + (reported.X - _lastReported.X),
+            VirtualCursor.Y + (reported.Y - _lastReported.Y));
+
+        _lastReported = reported;
     }
 
     public void Dispose()

@@ -28,6 +28,7 @@ internal sealed class TrayApp : IDisposable
     private readonly ToolStripMenuItem _overlayItem;
     private readonly DebugOverlay _overlay = new();
     private readonly System.Windows.Forms.Timer _tooltipTimer;
+    private readonly System.Windows.Forms.Timer _dotTimer;
     private IntPtr _iconHandle;
 
     public TrayApp(bool verbose)
@@ -55,14 +56,10 @@ internal sealed class TrayApp : IDisposable
             _log.Write($"verbose = {_log.Verbose}");
         };
 
-        _overlayItem = new ToolStripMenuItem("Debug overlay");
-        _overlayItem.Click += (_, _) =>
-        {
-            _overlayItem.Checked = !_overlayItem.Checked;
-            if (_overlayItem.Checked) _overlay.Show(_bridge.Topology);
-            else _overlay.Hide();
-            _log.Write($"debug overlay = {_overlayItem.Checked}");
-        };
+        // Only the tick is set here. The squares themselves go up in Run(),
+        // once the hook is in and the app is about to start listening.
+        _overlayItem = new ToolStripMenuItem("Debug overlay") { Checked = Settings.DebugOverlay };
+        _overlayItem.Click += (_, _) => ToggleOverlay();
 
         _menu = new ContextMenuStrip();
         _menu.Items.Add(_enabledItem);
@@ -92,6 +89,12 @@ internal sealed class TrayApp : IDisposable
         // rectangles the jump logic is built on.
         SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 
+        // The dot is moved on a timer rather than straight from the hook. The
+        // hook has to hand control back quickly or Windows drops it, and moving
+        // a window is not work worth doing in there.
+        _dotTimer = new System.Windows.Forms.Timer { Interval = 16 };
+        _dotTimer.Tick += (_, _) => _overlay.MoveDot(_bridge.VirtualCursor);
+
         _tooltipTimer = new System.Windows.Forms.Timer { Interval = 2000 };
         _tooltipTimer.Tick += (_, _) => UpdateTooltip();
         _tooltipTimer.Start();
@@ -110,6 +113,12 @@ internal sealed class TrayApp : IDisposable
             _log.Flush();
             MessageBox.Show(ex.Message, "MouseBridge", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
+        }
+
+        if (_overlayItem.Checked)
+        {
+            ApplyOverlay(true);
+            _log.Write("debug overlay = True (saved setting)");
         }
 
         Application.Run();
@@ -137,9 +146,45 @@ internal sealed class TrayApp : IDisposable
         _bridge.RefreshTopology();
 
         // The boxes are pinned to monitor rectangles that have just changed.
-        if (_overlay.Visible) _overlay.Show(_bridge.Topology);
+        if (_overlay.Visible) _overlay.Show(_bridge.Topology, _bridge.VirtualCursor);
 
         UpdateTooltip();
+    }
+
+    /// <summary>Puts the overlay up or takes it down, dot and all.</summary>
+    private void ApplyOverlay(bool on)
+    {
+        if (on)
+        {
+            _overlay.Show(_bridge.Topology, _bridge.VirtualCursor);
+            _dotTimer.Start();
+        }
+        else
+        {
+            _dotTimer.Stop();
+            _overlay.Hide();
+        }
+    }
+
+    private void ToggleOverlay()
+    {
+        var on = !_overlayItem.Checked;
+        _overlayItem.Checked = on;
+
+        ApplyOverlay(on);
+
+        _log.Write($"debug overlay = {on}");
+
+        // A setting that will not save is worth a line in the log, but not
+        // worth interrupting: the overlay itself has already switched.
+        try
+        {
+            Settings.DebugOverlay = on;
+        }
+        catch (Exception ex)
+        {
+            _log.Write("could not save debug overlay setting: " + ex.Message);
+        }
     }
 
     private void ToggleStartup()
@@ -200,6 +245,7 @@ internal sealed class TrayApp : IDisposable
     {
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
         _tooltipTimer.Dispose();
+        _dotTimer.Dispose();
         _overlay.Dispose();
         _tray.MouseUp -= OnTrayMouseUp;
         _tray.Visible = false;
