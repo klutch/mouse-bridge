@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Reflection;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
@@ -9,8 +10,17 @@ namespace MouseBridge;
 /// <summary>Tray presence: start/stop, logging toggle, and display-change handling.</summary>
 internal sealed class TrayApp : IDisposable
 {
+    /// <summary>
+    /// The helper NotifyIcon uses for its own right-click menu. It puts the menu
+    /// in front first, which is what makes clicking elsewhere close it again, so
+    /// borrowing it gives left click exactly the same behaviour as right click.
+    /// </summary>
+    private static readonly MethodInfo? ShowTrayMenu = typeof(NotifyIcon).GetMethod(
+        "ShowContextMenu", BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+
     private readonly Logger _log;
     private readonly Bridge _bridge;
+    private readonly ContextMenuStrip _menu;
     private readonly NotifyIcon _tray;
     private readonly ToolStripMenuItem _enabledItem;
     private readonly ToolStripMenuItem _startupItem;
@@ -54,26 +64,29 @@ internal sealed class TrayApp : IDisposable
             _log.Write($"debug overlay = {_overlayItem.Checked}");
         };
 
-        var menu = new ContextMenuStrip();
-        menu.Items.Add(_enabledItem);
-        menu.Items.Add(_startupItem);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(_verboseItem);
-        menu.Items.Add(_overlayItem);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(new ToolStripMenuItem("Reload display layout", null, (_, _) => Reload()));
-        menu.Items.Add(new ToolStripMenuItem("Open log folder", null, (_, _) => OpenLogFolder()));
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, _) => Application.ExitThread()));
+        _menu = new ContextMenuStrip();
+        _menu.Items.Add(_enabledItem);
+        _menu.Items.Add(_startupItem);
+        _menu.Items.Add(new ToolStripSeparator());
+        _menu.Items.Add(_verboseItem);
+        _menu.Items.Add(_overlayItem);
+        _menu.Items.Add(new ToolStripSeparator());
+        _menu.Items.Add(new ToolStripMenuItem("Reload display layout", null, (_, _) => Reload()));
+        _menu.Items.Add(new ToolStripMenuItem("Open log folder", null, (_, _) => OpenLogFolder()));
+        _menu.Items.Add(new ToolStripSeparator());
+        _menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, _) => Application.ExitThread()));
 
         _iconHandle = IntPtr.Zero;
         _tray = new NotifyIcon
         {
             Icon = BuildIcon(out _iconHandle),
-            ContextMenuStrip = menu,
+            ContextMenuStrip = _menu,
             Visible = true,
             Text = "MouseBridge",
         };
+
+        // Right click opens the menu on its own; this adds left click.
+        _tray.MouseUp += OnTrayMouseUp;
 
         // Monitors being added, removed, or rearranged invalidates the cached
         // rectangles the jump logic is built on.
@@ -100,6 +113,21 @@ internal sealed class TrayApp : IDisposable
         }
 
         Application.Run();
+    }
+
+    private void OnTrayMouseUp(object? sender, MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left) return;
+
+        if (ShowTrayMenu is not null)
+        {
+            ShowTrayMenu.Invoke(_tray, null);
+            return;
+        }
+
+        // Should the helper ever disappear, still show something. The menu may
+        // then need a second click elsewhere to close.
+        _menu.Show(Control.MousePosition);
     }
 
     private void OnDisplaySettingsChanged(object? sender, EventArgs e) => Reload();
@@ -173,8 +201,10 @@ internal sealed class TrayApp : IDisposable
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
         _tooltipTimer.Dispose();
         _overlay.Dispose();
+        _tray.MouseUp -= OnTrayMouseUp;
         _tray.Visible = false;
         _tray.Dispose();
+        _menu.Dispose();
         _bridge.Dispose();
         _log.Dispose();
 
