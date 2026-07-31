@@ -1,0 +1,31 @@
+{
+    // Pin the solution so the C# extension loads both projects without asking.
+    "dotnet.defaultSolution": "MouseBridge.slnx",
+
+    // Spaces only, four of them, in every file type. detectIndentation is off
+    // so opening a file with tabs does not switch the editor over to tabs.
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4,
+    "editor.detectIndentation": false,
+
+    "files.encoding": "utf8",
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+
+    // Build output is noise in search and in the file watcher, but stays visible
+    // in the file list — the launch settings point straight at bin\.
+    "search.exclude": {
+        "**/bin": true,
+        "**/obj": true
+    },
+    "files.watcherExclude": {
+        "**/bin/**": true,
+        "**/obj/**": true
+    },
+
+    "[csharp]": {
+        // Off on purpose: several files line up switch arms and short bodies in
+        // columns, and the C# formatter removes that spacing when it saves.
+        "editor.formatOnSave": false
+    }
+}

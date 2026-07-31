@@ -37,6 +37,14 @@ internal static class Native
     /// <summary>Marker written into dwExtraInfo so we can recognise our own jumps.</summary>
     public static readonly IntPtr JumpSignature = new(0x4D42_5247); // "MBRG"
 
+    // Window styles that keep the overlay boxes inert: never focusable, absent
+    // from Alt+Tab, and transparent to the mouse they exist to illustrate.
+    public const int WS_EX_TRANSPARENT = 0x00000020;
+    public const int WS_EX_TOOLWINDOW = 0x00000080;
+    public const int WS_EX_NOACTIVATE = 0x08000000;
+
+    public const int WM_DPICHANGED = 0x02E0;
+
     [DllImport("user32.dll", SetLastError = true)]
     public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
 

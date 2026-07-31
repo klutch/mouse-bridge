@@ -1,0 +1,88 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "detail": "Build MouseBridge.exe",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/MouseBridge.csproj",
+                "-consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build tests",
+            "detail": "Build the Topology scenario runner",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/tests/Topology.Tests.csproj",
+                "-consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build all",
+            "detail": "Build every project in the solution",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/MouseBridge.slnx",
+                "-consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "test",
+            "detail": "Run the Topology scenarios (a plain console app, not a test framework)",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "run",
+                "--project",
+                "${workspaceFolder}/tests/Topology.Tests.csproj"
+            ],
+            "problemMatcher": "$msCompile",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            },
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "stop MouseBridge",
+            "detail": "Close a running copy — a second copy would exit on its own and look like nothing happened",
+            "command": "powershell",
+            "type": "process",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "Get-Process MouseBridge -ErrorAction SilentlyContinue | Stop-Process; exit 0"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "build and restart",
+            "detail": "Close the running tray app, then build — used before F5",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "stop MouseBridge",
+                "build"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}

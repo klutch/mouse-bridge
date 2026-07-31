@@ -40,6 +40,9 @@ internal sealed class Topology
 
     public IReadOnlyList<Rectangle> Screens => _screens;
 
+    /// <summary>The corner zone in effect, so the debug overlay can draw what the logic actually uses.</summary>
+    public int CornerZone => _cornerZone;
+
     public bool Contains(POINT p)
     {
         foreach (var s in _screens)

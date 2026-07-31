@@ -13,7 +13,10 @@ internal sealed class TrayApp : IDisposable
     private readonly Bridge _bridge;
     private readonly NotifyIcon _tray;
     private readonly ToolStripMenuItem _enabledItem;
+    private readonly ToolStripMenuItem _startupItem;
     private readonly ToolStripMenuItem _verboseItem;
+    private readonly ToolStripMenuItem _overlayItem;
+    private readonly DebugOverlay _overlay = new();
     private readonly System.Windows.Forms.Timer _tooltipTimer;
     private IntPtr _iconHandle;
 
@@ -31,6 +34,9 @@ internal sealed class TrayApp : IDisposable
             UpdateTooltip();
         };
 
+        _startupItem = new ToolStripMenuItem("Start on login") { Checked = StartupRegistration.IsEnabled() };
+        _startupItem.Click += (_, _) => ToggleStartup();
+
         _verboseItem = new ToolStripMenuItem("Verbose logging") { Checked = verbose };
         _verboseItem.Click += (_, _) =>
         {
@@ -39,9 +45,21 @@ internal sealed class TrayApp : IDisposable
             _log.Write($"verbose = {_log.Verbose}");
         };
 
+        _overlayItem = new ToolStripMenuItem("Debug overlay");
+        _overlayItem.Click += (_, _) =>
+        {
+            _overlayItem.Checked = !_overlayItem.Checked;
+            if (_overlayItem.Checked) _overlay.Show(_bridge.Topology);
+            else _overlay.Hide();
+            _log.Write($"debug overlay = {_overlayItem.Checked}");
+        };
+
         var menu = new ContextMenuStrip();
         menu.Items.Add(_enabledItem);
+        menu.Items.Add(_startupItem);
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_verboseItem);
+        menu.Items.Add(_overlayItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Reload display layout", null, (_, _) => Reload()));
         menu.Items.Add(new ToolStripMenuItem("Open log folder", null, (_, _) => OpenLogFolder()));
@@ -89,7 +107,28 @@ internal sealed class TrayApp : IDisposable
     private void Reload()
     {
         _bridge.RefreshTopology();
+
+        // The boxes are pinned to monitor rectangles that have just changed.
+        if (_overlay.Visible) _overlay.Show(_bridge.Topology);
+
         UpdateTooltip();
+    }
+
+    private void ToggleStartup()
+    {
+        var wanted = !_startupItem.Checked;
+        try
+        {
+            StartupRegistration.SetEnabled(wanted);
+            _startupItem.Checked = wanted;
+            _log.Write($"start on login = {wanted}");
+        }
+        catch (Exception ex)
+        {
+            _log.Write("start on login failed: " + ex.Message);
+            _startupItem.Checked = StartupRegistration.IsEnabled();
+            MessageBox.Show(ex.Message, "MouseBridge", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
     private void UpdateTooltip()
@@ -133,6 +172,7 @@ internal sealed class TrayApp : IDisposable
     {
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
         _tooltipTimer.Dispose();
+        _overlay.Dispose();
         _tray.Visible = false;
         _tray.Dispose();
         _bridge.Dispose();
