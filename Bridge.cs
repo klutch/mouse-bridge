@@ -15,6 +15,8 @@ internal sealed class Bridge : IDisposable
     private IntPtr _hook;
     private Topology _topology;
 
+    public Topology Topology => _topology;
+
     /// <summary>
     /// A second cursor that is not stopped by the edge of the desktop. It sits
     /// on the real cursor while the mouse has room, and carries on past the edge
@@ -28,8 +30,6 @@ internal sealed class Bridge : IDisposable
         _callback = OnMouseEvent;
         _topology = Topology.FromSystem();
     }
-
-    public Topology Topology => _topology;
 
     public void Install()
     {
@@ -74,39 +74,19 @@ internal sealed class Bridge : IDisposable
         if (!Native.GetCursorPos(out var current))
             return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
 
-        var topology = _topology;
-        TrackVirtualCursor(data.pt, current, topology);
-        _log.Trace(data.pt, current, topology);
-
-        return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
-    }
-
-    /// <summary>
-    /// Keeps the virtual cursor up to date.
-    /// </summary>
-    /// <param name="reported">Where this move wants to land, before any clamping.</param>
-    /// <param name="actual">Where the cursor is right now, this move not yet applied.</param>
-    /// <remarks>
-    /// While the mouse still has room the two are the same thing. The virtual
-    /// one only goes its own way once the edge of the desktop starts holding
-    /// the real one back, and it rejoins as soon as the mouse is free again.
-    /// Letting it run on the whole time is no good in practice: every shove at
-    /// an edge leaves it further out, and it never comes back.
-    /// Internal rather than private so it can be exercised without a real mouse.
-    /// </remarks>
-    internal void TrackVirtualCursor(POINT reported, POINT actual, Topology topology)
-    {
-        VirtualCursor = new POINT(Cursor.Position.X, Cursor.Position.Y);
-        VirtualCursor += reported - actual;
-
-        if (Topology.Contains(VirtualCursor))
+        if (_topology.Contains(data.pt))
         {
-            Cursor.Position = VirtualCursor.ToPoint();
+            Cursor.Position = data.pt.ToPoint();
         }
         else
         {
-            VirtualCursor = Topology.Clamp(VirtualCursor);
+            Cursor.Position = new Point(100,100);
+            Console.WriteLine("Whaaa");
         }
+
+        _log.Trace(data.pt, current, _topology);
+
+        return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
     }
 
     public void Dispose()
