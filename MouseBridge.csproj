@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>MouseBridge</AssemblyName>
+    <RootNamespace>MouseBridge</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- SYSLIB1054: DllImport is fine here; not worth churning to LibraryImport.
+         WFO0003: WinForms wants DPI mode set via ApplicationHighDpiMode, but that
+         runs Application.SetHighDpiMode partway into Main and silently no-ops if
+         anything has already touched a DPI-dependent API. The manifest applies at
+         process start, which is what the hook coordinates depend on. -->
+    <NoWarn>$(NoWarn);SYSLIB1054;WFO0003</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- tests/ lives under this folder and links the sources it exercises;
+         without this its own files would be globbed in twice. -->
+    <Compile Remove="tests\**" />
+  </ItemGroup>
+
+</Project>
