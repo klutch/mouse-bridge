@@ -108,8 +108,16 @@ internal sealed class DebugOverlay : IDisposable
 
     /// <summary>
     /// Shared setup for every piece of the overlay: sits above other windows,
-    /// never takes focus, and passes clicks straight through to what is behind.
+    /// never takes focus, and is invisible to the mouse.
     /// </summary>
+    /// <remarks>
+    /// Invisible means more than clicks going through. The window must never be
+    /// picked as the thing under the pointer at all, or it takes over the cursor
+    /// shape and steals the hover from whatever is really there. Three things
+    /// together see to that: the transparent style keeps it out of the search for
+    /// a window under the pointer, the hit test answers "not me" should anything
+    /// ask anyway, and drag-and-drop is left switched off.
+    /// </remarks>
     private abstract class OverlayWindow : Form
     {
         /// <summary>Keyed out to see-through, so only what is drawn shows.</summary>
@@ -138,6 +146,39 @@ internal sealed class DebugOverlay : IDisposable
                 cp.ExStyle |= Native.WS_EX_TRANSPARENT | Native.WS_EX_TOOLWINDOW | Native.WS_EX_NOACTIVATE;
                 return cp;
             }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            switch (m.Msg)
+            {
+                // Answered before WinForms sees either one, because its own
+                // handling of them is what brings the mouse into play.
+                case Native.WM_NCHITTEST:
+                    m.Result = Native.HTTRANSPARENT;
+                    return;
+
+                case Native.WM_MOUSEACTIVATE:
+                    m.Result = Native.MA_NOACTIVATE;
+                    return;
+            }
+
+            base.WndProc(ref m);
+        }
+
+        /// <summary>
+        /// Puts the window somewhere without the side effects the Bounds property
+        /// brings with it. Nothing is focused, no z-order is touched, and no
+        /// notice of the move goes out.
+        /// </summary>
+        protected void PlaceAt(int x, int y)
+        {
+            if (!IsHandleCreated) return;
+
+            Native.SetWindowPos(
+                Handle, IntPtr.Zero, x, y, 0, 0,
+                Native.SWP_NOSIZE | Native.SWP_NOZORDER | Native.SWP_NOACTIVATE
+                    | Native.SWP_NOOWNERZORDER | Native.SWP_NOSENDCHANGING);
         }
     }
 
@@ -232,7 +273,11 @@ internal sealed class DebugOverlay : IDisposable
         /// <summary>Where the window was last put, so a still mouse costs nothing.</summary>
         private Point _at = new(int.MinValue, int.MinValue);
 
-        public DotWindow(POINT at) => MoveTo(at);
+        public DotWindow(POINT at)
+        {
+            Size = new Size(Span, Span);
+            MoveTo(at);
+        }
 
         public void MoveTo(POINT p)
         {
@@ -240,7 +285,11 @@ internal sealed class DebugOverlay : IDisposable
             if (at == _at) return;
 
             _at = at;
-            Bounds = new Rectangle(at.X, at.Y, Span, Span);
+
+            // Before the window exists there is nothing to move, so the starting
+            // spot goes on the property instead and is used when it is created.
+            if (IsHandleCreated) PlaceAt(at.X, at.Y);
+            else Location = at;
         }
 
         private static Rectangle Centred(int radius) =>

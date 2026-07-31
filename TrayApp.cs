@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Reflection;
 using System.Windows.Forms;
 using Microsoft.Win32;
@@ -27,7 +26,7 @@ internal sealed class TrayApp : IDisposable
     private readonly ToolStripMenuItem _overlayItem;
     private readonly DebugOverlay _overlay = new();
     private readonly System.Windows.Forms.Timer _dotTimer;
-    private IntPtr _iconHandle;
+    private readonly Icon _icon;
 
     public TrayApp(bool verbose)
     {
@@ -61,10 +60,10 @@ internal sealed class TrayApp : IDisposable
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, _) => Application.ExitThread()));
 
-        _iconHandle = IntPtr.Zero;
+        _icon = LoadIcon();
         _tray = new NotifyIcon
         {
-            Icon = BuildIcon(out _iconHandle),
+            Icon = _icon,
             ContextMenuStrip = _menu,
             Visible = true,
             Text = "MouseBridge",
@@ -201,28 +200,18 @@ internal sealed class TrayApp : IDisposable
         Process.Start(new ProcessStartInfo(_log.Folder) { UseShellExecute = true });
     }
 
-    /// <summary>Two offset panels with an arrow bridging the step between them.</summary>
-    private static Icon BuildIcon(out IntPtr handle)
+    /// <summary>
+    /// The app icon: two offset panels with an arrow bridging the step between
+    /// them. It comes from the same .ico the executable uses, picked at whatever
+    /// size the tray wants so it stays sharp on high-DPI displays.
+    /// </summary>
+    private static Icon LoadIcon()
     {
-        using var bmp = new Bitmap(32, 32);
-        using (var g = Graphics.FromImage(bmp))
-        {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.Clear(Color.Transparent);
+        using var stream = typeof(TrayApp).Assembly.GetManifestResourceStream("MouseBridge.ico")
+            ?? throw new InvalidOperationException("MouseBridge.ico is missing from the assembly.");
 
-            using var panel = new Pen(Color.FromArgb(235, 235, 235), 2f);
-            using var arrow = new Pen(Color.FromArgb(90, 200, 250), 2.5f)
-            {
-                EndCap = LineCap.ArrowAnchor,
-            };
-
-            g.DrawRectangle(panel, 3, 9, 10, 16);   // tall panel, sitting low
-            g.DrawRectangle(panel, 19, 4, 10, 11);  // wide panel, sitting high
-            g.DrawLine(arrow, 9, 20, 24, 20);
-        }
-
-        handle = bmp.GetHicon();
-        return Icon.FromHandle(handle);
+        var wanted = SystemInformation.SmallIconSize;
+        return new Icon(stream, wanted.Width, wanted.Height);
     }
 
     public void Dispose()
@@ -236,11 +225,6 @@ internal sealed class TrayApp : IDisposable
         _menu.Dispose();
         _bridge.Dispose();
         _log.Dispose();
-
-        if (_iconHandle != IntPtr.Zero)
-        {
-            Native.DestroyIcon(_iconHandle);
-            _iconHandle = IntPtr.Zero;
-        }
+        _icon.Dispose();
     }
 }

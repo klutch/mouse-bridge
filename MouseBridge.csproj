@@ -9,6 +9,7 @@
     <AssemblyName>MouseBridge</AssemblyName>
     <RootNamespace>MouseBridge</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>MouseBridge.ico</ApplicationIcon>
     <!-- SYSLIB1054: DllImport is fine here; not worth churning to LibraryImport.
          WFO0003: WinForms wants DPI mode set via ApplicationHighDpiMode, but that
          runs Application.SetHighDpiMode partway into Main and silently no-ops if
@@ -16,5 +17,10 @@
          process start, which is what the hook coordinates depend on. -->
     <NoWarn>$(NoWarn);SYSLIB1054;WFO0003</NoWarn>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Same file as ApplicationIcon above, so the tray shows the exe's icon. -->
+    <EmbeddedResource Include="MouseBridge.ico" LogicalName="MouseBridge.ico" />
+  </ItemGroup>
 
 </Project>

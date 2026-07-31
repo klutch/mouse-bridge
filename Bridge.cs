@@ -103,6 +103,10 @@ internal sealed class Bridge : IDisposable
         {
             Cursor.Position = VirtualCursor.ToPoint();
         }
+        else
+        {
+            VirtualCursor = Topology.Clamp(VirtualCursor);
+        }
     }
 
     public void Dispose()
