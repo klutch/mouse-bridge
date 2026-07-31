@@ -15,8 +15,6 @@ internal sealed class Bridge : IDisposable
 
     private IntPtr _hook;
     private Topology _topology;
-    private POINT _lastReported;
-    private bool _tracking;
 
     public bool Enabled { get; set; } = true;
 
@@ -81,14 +79,14 @@ internal sealed class Bridge : IDisposable
         if (!Native.GetCursorPos(out var current))
             return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
 
-        TrackVirtualCursor(data.pt, current);
+        var topology = _topology;
+        TrackVirtualCursor(data.pt, current, topology);
 
         // Tracking carries on while paused, so the virtual cursor is still in
         // the right place when the bridge is switched back on.
         if (!Enabled)
             return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
 
-        var topology = _topology;
         _log.Trace(data.pt, current, topology);
 
         if (topology.TryResolveJump(data.pt, current, out var jump))
@@ -106,27 +104,32 @@ internal sealed class Bridge : IDisposable
     }
 
     /// <summary>
-    /// Moves the virtual cursor by the step the mouse just took. The hook hands
-    /// out whole positions rather than steps, so the step is the difference
-    /// between this position and the one before it.
+    /// Keeps the virtual cursor up to date.
     /// </summary>
-    /// <remarks>Internal rather than private so it can be exercised without a real mouse.</remarks>
-    internal void TrackVirtualCursor(POINT reported, POINT actual)
+    /// <param name="reported">Where this move wants to land, before any clamping.</param>
+    /// <param name="actual">Where the cursor is right now, this move not yet applied.</param>
+    /// <remarks>
+    /// While the mouse still has room the two are the same thing. The virtual
+    /// one only goes its own way once the edge of the desktop starts holding
+    /// the real one back, and it rejoins as soon as the mouse is free again.
+    /// Letting it run on the whole time is no good in practice: every shove at
+    /// an edge and every jump leaves it further out, and it never comes back.
+    /// Internal rather than private so it can be exercised without a real mouse.
+    /// </remarks>
+    internal void TrackVirtualCursor(POINT reported, POINT actual, Topology topology)
     {
-        if (!_tracking)
+        if (topology.Contains(reported))
         {
-            // First move seen: start the two off together.
-            VirtualCursor = actual;
-            _lastReported = reported;
-            _tracking = true;
+            VirtualCursor = reported;
             return;
         }
 
+        // Held at an edge: add the step this move wanted to take. The gap
+        // between two reported positions would not do, because at an edge each
+        // one is measured from the pinned cursor and so stops growing.
         VirtualCursor = new POINT(
-            VirtualCursor.X + (reported.X - _lastReported.X),
-            VirtualCursor.Y + (reported.Y - _lastReported.Y));
-
-        _lastReported = reported;
+            VirtualCursor.X + (reported.X - actual.X),
+            VirtualCursor.Y + (reported.Y - actual.Y));
     }
 
     public void Dispose()
