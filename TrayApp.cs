@@ -22,12 +22,10 @@ internal sealed class TrayApp : IDisposable
     private readonly Bridge _bridge;
     private readonly ContextMenuStrip _menu;
     private readonly NotifyIcon _tray;
-    private readonly ToolStripMenuItem _enabledItem;
     private readonly ToolStripMenuItem _startupItem;
     private readonly ToolStripMenuItem _verboseItem;
     private readonly ToolStripMenuItem _overlayItem;
     private readonly DebugOverlay _overlay = new();
-    private readonly System.Windows.Forms.Timer _tooltipTimer;
     private readonly System.Windows.Forms.Timer _dotTimer;
     private IntPtr _iconHandle;
 
@@ -35,15 +33,6 @@ internal sealed class TrayApp : IDisposable
     {
         _log = new Logger(verbose);
         _bridge = new Bridge(_log);
-
-        _enabledItem = new ToolStripMenuItem("Enabled") { Checked = true };
-        _enabledItem.Click += (_, _) =>
-        {
-            _bridge.Enabled = !_bridge.Enabled;
-            _enabledItem.Checked = _bridge.Enabled;
-            _log.Write($"enabled = {_bridge.Enabled}");
-            UpdateTooltip();
-        };
 
         _startupItem = new ToolStripMenuItem("Start on login") { Checked = StartupRegistration.IsEnabled() };
         _startupItem.Click += (_, _) => ToggleStartup();
@@ -62,7 +51,6 @@ internal sealed class TrayApp : IDisposable
         _overlayItem.Click += (_, _) => ToggleOverlay();
 
         _menu = new ContextMenuStrip();
-        _menu.Items.Add(_enabledItem);
         _menu.Items.Add(_startupItem);
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(_verboseItem);
@@ -86,7 +74,7 @@ internal sealed class TrayApp : IDisposable
         _tray.MouseUp += OnTrayMouseUp;
 
         // Monitors being added, removed, or rearranged invalidates the cached
-        // rectangles the jump logic is built on.
+        // rectangles the overlay is pinned to.
         SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 
         // The dot is moved on a timer rather than straight from the hook. The
@@ -95,9 +83,8 @@ internal sealed class TrayApp : IDisposable
         _dotTimer = new System.Windows.Forms.Timer { Interval = 16 };
         _dotTimer.Tick += (_, _) => _overlay.MoveDot(_bridge.VirtualCursor);
 
-        _tooltipTimer = new System.Windows.Forms.Timer { Interval = 2000 };
-        _tooltipTimer.Tick += (_, _) => UpdateTooltip();
-        _tooltipTimer.Start();
+        // Nothing in the tooltip changes on its own any more, so it is written
+        // here and again whenever the display layout changes.
         UpdateTooltip();
     }
 
@@ -204,12 +191,9 @@ internal sealed class TrayApp : IDisposable
         }
     }
 
-    private void UpdateTooltip()
-    {
-        var state = _bridge.Enabled ? "on" : "paused";
+    private void UpdateTooltip() =>
         // NotifyIcon.Text is capped at 63 characters.
-        _tray.Text = $"MouseBridge ({state}) — {_bridge.Topology.Screens.Count} displays, {_bridge.JumpCount} jumps";
-    }
+        _tray.Text = $"MouseBridge — {_bridge.Topology.Screens.Count} displays";
 
     private void OpenLogFolder()
     {
@@ -244,7 +228,6 @@ internal sealed class TrayApp : IDisposable
     public void Dispose()
     {
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
-        _tooltipTimer.Dispose();
         _dotTimer.Dispose();
         _overlay.Dispose();
         _tray.MouseUp -= OnTrayMouseUp;

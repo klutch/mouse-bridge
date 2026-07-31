@@ -20,7 +20,6 @@ internal sealed class Logger : IDisposable
     /// <summary>When true, every mouse move that leaves the desktop is recorded.</summary>
     public bool Verbose { get; set; }
 
-    public string Path => _path;
     public string Folder => System.IO.Path.GetDirectoryName(_path)!;
 
     public Logger(bool verbose)

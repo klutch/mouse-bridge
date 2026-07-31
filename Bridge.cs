@@ -3,8 +3,7 @@ using System.Runtime.InteropServices;
 namespace MouseBridge;
 
 /// <summary>
-/// Installs the low-level mouse hook and redirects the cursor whenever it is
-/// about to snag on a step between vertically offset monitors.
+/// Watches the mouse and keeps the virtual cursor up to date.
 /// </summary>
 internal sealed class Bridge : IDisposable
 {
@@ -16,14 +15,10 @@ internal sealed class Bridge : IDisposable
     private IntPtr _hook;
     private Topology _topology;
 
-    public bool Enabled { get; set; } = true;
-
-    public long JumpCount { get; private set; }
-
     /// <summary>
-    /// A second cursor that only ever moves by the amount the mouse moved. It
-    /// starts on the real cursor and is not stopped by the edge of the desktop,
-    /// so at an edge it shows where the mouse is really trying to go.
+    /// A second cursor that is not stopped by the edge of the desktop. It sits
+    /// on the real cursor while the mouse has room, and carries on past the edge
+    /// while the real one is held back, showing where the mouse is trying to go.
     /// </summary>
     public POINT VirtualCursor { get; private set; }
 
@@ -71,8 +66,8 @@ internal sealed class Bridge : IDisposable
 
         var data = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
 
-        // Ignore synthetic movement — including the SetCursorPos calls we make
-        // below, which would otherwise feed straight back into this callback.
+        // Movement put there by software is not the mouse moving, so it is no
+        // use for working out how far the mouse travelled.
         if ((data.flags & Native.LLMHF_INJECTED) != 0)
             return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
 
@@ -81,24 +76,7 @@ internal sealed class Bridge : IDisposable
 
         var topology = _topology;
         TrackVirtualCursor(data.pt, current, topology);
-
-        // Tracking carries on while paused, so the virtual cursor is still in
-        // the right place when the bridge is switched back on.
-        if (!Enabled)
-            return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
-
         _log.Trace(data.pt, current, topology);
-
-        if (topology.TryResolveJump(data.pt, current, out var jump))
-        {
-            Native.SetCursorPos(jump.X, jump.Y);
-            JumpCount++;
-            _log.Write($"jump {current} -> want {data.pt} -> landed {jump}");
-
-            // Swallow the event: letting it through would apply Windows' own
-            // clamp and drag the cursor straight back to the edge we just left.
-            return 1;
-        }
 
         return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
     }
@@ -113,7 +91,7 @@ internal sealed class Bridge : IDisposable
     /// one only goes its own way once the edge of the desktop starts holding
     /// the real one back, and it rejoins as soon as the mouse is free again.
     /// Letting it run on the whole time is no good in practice: every shove at
-    /// an edge and every jump leaves it further out, and it never comes back.
+    /// an edge leaves it further out, and it never comes back.
     /// Internal rather than private so it can be exercised without a real mouse.
     /// </remarks>
     internal void TrackVirtualCursor(POINT reported, POINT actual, Topology topology)

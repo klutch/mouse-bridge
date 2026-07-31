@@ -34,9 +34,6 @@ internal static class Native
     /// <summary>Set in MSLLHOOKSTRUCT.flags when the event came from SendInput / SetCursorPos.</summary>
     public const uint LLMHF_INJECTED = 0x00000001;
 
-    /// <summary>Marker written into dwExtraInfo so we can recognise our own jumps.</summary>
-    public static readonly IntPtr JumpSignature = new(0x4D42_5247); // "MBRG"
-
     // Window styles that keep the overlay boxes inert: never focusable, absent
     // from Alt+Tab, and transparent to the mouse they exist to illustrate.
     public const int WS_EX_TRANSPARENT = 0x00000020;
@@ -54,10 +51,6 @@ internal static class Native
 
     [DllImport("user32.dll")]
     public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool SetCursorPos(int x, int y);
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

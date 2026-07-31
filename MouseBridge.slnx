@@ -1,6 +1,3 @@
 <Solution>
-    <Folder Name="/tests/">
-        <Project Path="tests/Topology.Tests.csproj" />
-    </Folder>
     <Project Path="MouseBridge.csproj" />
 </Solution>

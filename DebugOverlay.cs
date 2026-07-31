@@ -33,6 +33,9 @@ internal sealed class DebugOverlay : IDisposable
 
     private static readonly string[] CornerNames = ["TL", "TR", "BL", "BR"];
 
+    /// <summary>Width and height of the square drawn on each corner.</summary>
+    private const int SquareSize = 16;
+
     /// <summary>Shared by every square, so it lives here rather than on one of them.</summary>
     internal static readonly Font LabelFont = new("Segoe UI", 8f, FontStyle.Bold);
 
@@ -59,8 +62,6 @@ internal sealed class DebugOverlay : IDisposable
         _dot = new DotWindow(cursor);
         _dot.Show();
 
-        var size = topology.CornerZone;
-
         for (var m = 0; m < topology.Screens.Count; m++)
         {
             var s = topology.Screens[m];
@@ -80,7 +81,7 @@ internal sealed class DebugOverlay : IDisposable
                 var box = new CornerBox(
                     s,
                     corners[c],
-                    size,
+                    SquareSize,
                     Palette[(m * corners.Length + c) % Palette.Length],
                     $"{m + 1}{CornerNames[c]} ({corners[c].X},{corners[c].Y})",
                     labelOnRight: c is 0 or 2);
