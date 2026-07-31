@@ -2,7 +2,7 @@
 Windows 10/11 has a bug / annoying feature with multiple monitor setups where the cursor gets snagged on corners and warps to offset positions on the other monitor if it accidentally grazes the wrong edge of the screen.
 
 <figure>
-	![A poorly-behaved corner](example_problem.gif)
+	<img src="example_problem.gif" alt="A poorly-behaved corner."/>
 	<figcaption>Example of snagging and warping.</figcaption>
 </figure>
 
@@ -12,6 +12,6 @@ This program runs in the system tray and addresses both problems by hooking into
 * If not, the cursor's position is clamped to the topology to keep it inside. Lets the cursor slide along boundaries instead of warping to new positions on the other screen.
 
 <figure>
-	![A well-behaved corner](example_solution.gif)
+	<img src="example_solution.gif" alt="A well-behaved corner."/>
 	<figcaption>Expected boundary movement.</figcaption>
 </figure>
