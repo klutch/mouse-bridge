@@ -64,8 +64,4 @@ internal sealed class Topology
 
         return best;
     }
-
-    public string Describe() =>
-        string.Join(Environment.NewLine, _screens.Select((s, i) =>
-            $"  [{i}] x={s.X} y={s.Y} w={s.Width} h={s.Height}"));
 }

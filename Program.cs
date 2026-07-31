@@ -5,7 +5,7 @@ namespace MouseBridge;
 internal static class Program
 {
     [STAThread]
-    private static void Main(string[] args)
+    private static void Main()
     {
         // A second copy would install a second hook and the two would fight
         // over the cursor, so quietly defer to the instance already running.
@@ -15,9 +15,7 @@ internal static class Program
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
-        var verbose = args.Any(a => a.Equals("--debug", StringComparison.OrdinalIgnoreCase));
-
-        using var app = new TrayApp(verbose);
+        using var app = new TrayApp();
         app.Run();
     }
 }
