@@ -1,6 +1,6 @@
 Talk in plain, basic english. Keep all jargon to a minimum.
 
-Do not use UI automation.
+Do not use UI automation. Do not use screen captures.
 
 Try to keep property descriptions (##) to a couple sentences max. If a concept can't be explained within that length, then you can exceed it if absolutely necessary. Try to avoid talking about the history of a property or specific examples.
 
