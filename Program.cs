@@ -12,9 +12,6 @@ internal static class Program
         using var single = new Mutex(true, @"Local\MouseBridge.SingleInstance", out var isFirst);
         if (!isFirst) return;
 
-        Application.EnableVisualStyles();
-        Application.SetCompatibleTextRenderingDefault(false);
-
         using var app = new TrayApp();
         app.Run();
     }
