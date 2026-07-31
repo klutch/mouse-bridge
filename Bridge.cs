@@ -96,10 +96,12 @@ internal sealed class Bridge : IDisposable
     /// </remarks>
     internal void TrackVirtualCursor(POINT reported, POINT actual, Topology topology)
     {
-        if (topology.Contains(reported))
+        VirtualCursor = new POINT(Cursor.Position.X, Cursor.Position.Y);
+        VirtualCursor += reported - actual;
+
+        if (Topology.Contains(VirtualCursor))
         {
-            VirtualCursor += reported - actual;
-            return;
+            Cursor.Position = VirtualCursor.ToPoint();
         }
     }
 

@@ -12,6 +12,11 @@ internal struct POINT
 
     public override string ToString() => $"({X},{Y})";
 
+    public Point ToPoint()
+    {
+        return new Point(X, Y);
+    }
+
     public static POINT operator +(POINT a, POINT b)
     {
         return new POINT(a.X + b.X, a.Y + b.Y);
