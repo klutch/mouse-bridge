@@ -1,0 +1,114 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Rr]elease/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+
+# Output of build.cmd (csc.exe direct compile)
+/WindowSwitcher.exe
+/WindowSwitcher.pdb
+
+# Build results / intermediates
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.ipdb
+*.pch
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+.builds
+*.svclog
+*.scc
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+project.lock.json
+project.fragment.lock.json
+.nuget/
+
+# .NET / MSBuild
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.userprefs
+.vs/
+msbuild.log
+msbuild.err
+msbuild.wrn
+BenchmarkDotNet.Artifacts/
+
+# Test results / coverage
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+*.trx
+*.VisualState.xml
+TestResult.xml
+
+# VS Code — keep shared project config, ignore local/user state
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.vscode/*.local.json
+.history/
+*.code-workspace
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# ReSharper / other tooling
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# Publish / deployment
+[Pp]ublish/
+*.[Pp]ublish.xml
+*.azurePubxml
+*.pubxml
+*.publishproj
+PublishScripts/
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Misc local files
+*.bak
+*.orig
+*.rej
+*.swp
+*~
+.env
+.env.local
