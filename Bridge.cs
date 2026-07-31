@@ -51,11 +51,7 @@ internal sealed class Bridge : IDisposable
         if ((data.flags & Native.LLMHF_INJECTED) != 0)
             return Native.CallNextHookEx(_hook, nCode, wParam, lParam);
 
-        if (_topology.Contains(data.pt))
-        {
-            Cursor.Position = data.pt.ToPoint();
-        }
-        else
+        if (!_topology.Contains(data.pt))
         {
             Cursor.Position = _topology.Clamp(data.pt).ToPoint();
             return 1;
