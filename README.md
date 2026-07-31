@@ -1,5 +1,5 @@
 # Mouse Bridge
-Improved mouse movement around boundary conditions.
+Improved mouse movement around boundary conditions for Windows.
 
 ## Problem
 Windows 10/11 has a bug / annoying feature with multiple monitor setups where the cursor gets snagged on corners and warps to offset positions on the other monitor if it accidentally grazes the wrong edge of the screen.
