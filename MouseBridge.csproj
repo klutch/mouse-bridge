@@ -17,10 +17,4 @@
     <NoWarn>$(NoWarn);SYSLIB1054;WFO0003</NoWarn>
   </PropertyGroup>
 
-  <ItemGroup>
-    <!-- tests/ lives under this folder and links the sources it exercises;
-         without this its own files would be globbed in twice. -->
-    <Compile Remove="tests\**" />
-  </ItemGroup>
-
 </Project>
